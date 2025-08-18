@@ -1,0 +1,6 @@
+__pycache__/
+instance/
+motorbike_costs.db
+venv/
+*.pyc
+
