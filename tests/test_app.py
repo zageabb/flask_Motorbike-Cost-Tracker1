@@ -4,7 +4,11 @@ import sys
 import pytest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app import app, db, Motorbike, Expense
+=======
+#from app import app, db, Expense
+
 
 @pytest.fixture
 def client():
@@ -33,10 +37,18 @@ def test_add_and_edit_expense(client):
         'category': 'Maintenance',
         'amount': '45.50',
         'user': 'alice',
+
+def test_add_expense(client):
+    resp = client.post('/add', data={
+        'description': 'Oil Change',
+        'category': 'Maintenance',
+        'amount': '45.50',
+
         'date': '2024-01-01'
     }, follow_redirects=True)
     assert resp.status_code == 200
     assert b'Oil Change' in resp.data
+
     assert b'alice' in resp.data
 
     with app.app_context():
@@ -54,3 +66,7 @@ def test_add_and_edit_expense(client):
     assert b'Chain' in resp.data
     assert b'bob' in resp.data
     assert b'Oil Change' not in resp.data
+    assert b'45.50' in resp.data
+
+    # Ensure total is calculated
+    assert b'Total' in resp.data
