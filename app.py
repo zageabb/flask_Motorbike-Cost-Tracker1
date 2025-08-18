@@ -23,7 +23,7 @@ class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     motorbike_id = db.Column(db.Integer, db.ForeignKey('motorbike.id'), nullable=False)
     user = db.Column(db.String(80), nullable=False)
-=======
+
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
