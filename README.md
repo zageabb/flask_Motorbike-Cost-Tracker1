@@ -14,6 +14,19 @@ This project is a Flask web application for tracking motorbike expenses. You can
 - View all expenses in a table.
 - See the total cost of all recorded expenses.
 
+## API
+
+The application exposes a small read-only API under the `/api` prefix so that tools like Excel can fetch data without drivers.
+
+Available endpoints:
+
+- `/api/health` – basic status endpoint
+- `/api/expenses` – list of expenses with paging, sorting and filtering
+- `/api/expenses/<id>` – fetch a single expense
+- `/api/expenses.csv` – CSV export of expenses
+
+Requests must include an `X-API-KEY` header. For development and the tests the key is set to `testkey`.
+
 
 ## Setup
 1. Create a virtual environment and install dependencies:

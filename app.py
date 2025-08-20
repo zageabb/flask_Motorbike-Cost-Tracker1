@@ -1,12 +1,22 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from datetime import datetime
 import os
+
+from api import api, init_api
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///motorbike_costs.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+# Enable CORS for API routes
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Register API blueprint and initialize API key
+app.register_blueprint(api)
+init_api(api_key=os.environ.get("API_KEY", "testkey"))
 
 
 
@@ -23,10 +33,6 @@ class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     motorbike_id = db.Column(db.Integer, db.ForeignKey('motorbike.id'), nullable=False)
     user = db.Column(db.String(80), nullable=False)
-
-class Expense(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-
     date = db.Column(db.Date, default=datetime.utcnow)
     description = db.Column(db.String(120), nullable=False)
     category = db.Column(db.String(80), nullable=False)
