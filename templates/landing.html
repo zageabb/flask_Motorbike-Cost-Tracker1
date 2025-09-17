@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Overview · Motorbike Cost Tracker{% endblock %}
+{% block content %}
+<div class="row align-items-center">
+  <div class="col-lg-6">
+    <h1 class="display-5 fw-bold mb-4">Track every investment across your motorbike portfolio</h1>
+    <p class="lead text-muted">Stay aligned on purchases, refurbishment efforts, and profit sharing. Use the quick links to jump straight into the workflows you need most.</p>
+    <div class="d-flex flex-wrap gap-3 mt-4">
+      <a class="btn btn-primary btn-lg" href="{{ url_for('main.dashboard') }}">Open dashboard</a>
+      <a class="btn btn-outline-primary btn-lg" href="{{ url_for('main.motorbikes_list') }}">View motorbikes</a>
+      <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('main.analytics') }}">See analytics</a>
+    </div>
+  </div>
+  <div class="col-lg-6 mt-4 mt-lg-0">
+    <div class="row g-4">
+      <div class="col-sm-6">
+        <div class="summary-card p-4 h-100">
+          <h2 class="h6 text-uppercase text-muted">Workflow</h2>
+          <p class="fs-4 mb-1">Dashboard</p>
+          <p class="text-muted mb-0">Capture new bikes and parts with real-time totals.</p>
+        </div>
+      </div>
+      <div class="col-sm-6">
+        <div class="summary-card p-4 h-100">
+          <h2 class="h6 text-uppercase text-muted">Operations</h2>
+          <p class="fs-4 mb-1">Motorbikes</p>
+          <p class="text-muted mb-0">Inspect current inventory, sale readiness, and constraints.</p>
+        </div>
+      </div>
+      <div class="col-sm-6">
+        <div class="summary-card p-4 h-100">
+          <h2 class="h6 text-uppercase text-muted">Insights</h2>
+          <p class="fs-4 mb-1">Analytics</p>
+          <p class="text-muted mb-0">Understand partner investments and profit sharing.</p>
+        </div>
+      </div>
+      <div class="col-sm-6">
+        <div class="summary-card p-4 h-100">
+          <h2 class="h6 text-uppercase text-muted">Security</h2>
+          <p class="fs-4 mb-1">Authenticated</p>
+          <p class="text-muted mb-0">Only teammates can view the financial picture.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

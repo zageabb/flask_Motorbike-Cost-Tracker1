@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Analytics · Motorbike Cost Tracker{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <h1 class="h3 mb-0">Analytics</h1>
+  <form class="d-flex align-items-center gap-2" method="get">
+    <label class="form-label mb-0" for="status">Filter</label>
+    <select class="form-select" id="status" name="status" onchange="this.form.submit()">
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+      <option value="sold" {% if status_filter == 'sold' %}selected{% endif %}>Sold</option>
+      <option value="unsold" {% if status_filter == 'unsold' %}selected{% endif %}>Unsold</option>
+    </select>
+  </form>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Portfolio cost</h2>
+      <p class="display-6 mb-0">${{ '%.2f'|format(totals.total_cost) }}</p>
+      <p class="text-muted mb-0">Excludes ignored motorbikes.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Tanya investment</h2>
+      <p class="display-6 mb-1">${{ '%.2f'|format(totals.tanya_investment) }}</p>
+      <p class="text-muted mb-0">Profit share: ${{ '%.2f'|format(totals.profit_share) }}</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Gerald investment</h2>
+      <p class="display-6 mb-1">${{ '%.2f'|format(totals.gerald_investment) }}</p>
+      <p class="text-muted mb-0">Profit share: ${{ '%.2f'|format(totals.profit_share) }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-4">
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Motorbike</th>
+            <th>Status</th>
+            <th>Total cost</th>
+            <th>Buyer</th>
+            <th>Tanya investment</th>
+            <th>Gerald investment</th>
+            <th>Profit</th>
+            <th>Profit share</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr class="{% if row.ignore %}table-secondary{% endif %}">
+            <td><a href="{{ url_for('main.motorbike_detail', motorbike_id=row.id) }}">{{ row.name }}</a></td>
+            <td>
+              {% if row.ignore %}<span class="badge bg-secondary">Ignored</span>{% endif %}
+              {% if row.is_sold %}<span class="badge bg-success">Sold</span>{% else %}<span class="badge bg-info text-dark">Unsold</span>{% endif %}
+            </td>
+            <td>${{ '%.2f'|format(row.total_cost) }}</td>
+            <td>{{ row.buyer or '—' }}</td>
+            <td>${{ '%.2f'|format(row.tanya_investment) }}</td>
+            <td>${{ '%.2f'|format(row.gerald_investment) }}</td>
+            <td>${{ '%.2f'|format(row.profit) }}</td>
+            <td>${{ '%.2f'|format(row.profit_share) }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No motorbikes match the selected filter.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

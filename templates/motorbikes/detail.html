@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}{{ motorbike.name }} · Motorbike Cost Tracker{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">{{ motorbike.name }}</h1>
+    <div class="d-flex flex-wrap gap-2">
+      {% if motorbike.is_sold %}<span class="badge bg-success">Sold</span>{% else %}<span class="badge bg-info text-dark">Unsold</span>{% endif %}
+      {% if motorbike.ignore %}<span class="badge bg-secondary">Ignored</span>{% endif %}
+      {% if motorbike.buyer %}<span class="badge bg-light text-dark">Buyer: {{ motorbike.buyer }}</span>{% endif %}
+    </div>
+  </div>
+  <form method="post" onsubmit="return confirm('Delete this motorbike?')">
+    <input type="hidden" name="action" value="delete">
+    <button class="btn btn-outline-danger">Delete motorbike</button>
+  </form>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Total cost</h2>
+      <p class="display-6 mb-1">${{ '%.2f'|format(motorbike.total_cost) }}</p>
+      <p class="text-muted mb-1">Purchase price ${{ '%.2f'|format(motorbike.purchase_price) }}</p>
+      <p class="text-muted mb-0">Parts ${{ '%.2f'|format(motorbike.part_total) }}</p>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Partner investments</h2>
+      <p class="mb-1">Tanya: ${{ '%.2f'|format(motorbike.tanya_contribution + motorbike.part_investment('tanya')) }}</p>
+      <p class="mb-1">Gerald: ${{ '%.2f'|format(motorbike.gerald_contribution + motorbike.part_investment('gerald')) }}</p>
+      <p class="mb-0">Shared/Other: ${{ '%.2f'|format(motorbike.part_total - motorbike.part_investment('tanya') - motorbike.part_investment('gerald')) }}</p>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Profit</h2>
+      <p class="display-6 mb-1">${{ '%.2f'|format(motorbike.profit) }}</p>
+      {% if motorbike.is_sold and motorbike.sale_price %}
+      <p class="text-muted mb-0">Sold for ${{ '%.2f'|format(motorbike.sale_price) }}</p>
+      {% else %}
+      <p class="text-muted mb-0">Mark as sold to calculate profit.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4">
+        <h2 class="h5 mb-3">Update motorbike</h2>
+        <form method="post">
+          <input type="hidden" name="action" value="update">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="name">Name</label>
+              <input class="form-control" id="name" name="name" value="{{ motorbike.name }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="purchase_price">Initial cost</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="purchase_price" name="purchase_price" value="{{ motorbike.purchase_price }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="buyer">Buyer</label>
+              <input class="form-control" id="buyer" name="buyer" value="{{ motorbike.buyer or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tanya_contribution">Tanya contribution</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="tanya_contribution" name="tanya_contribution" value="{{ motorbike.tanya_contribution }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="gerald_contribution">Gerald contribution</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="gerald_contribution" name="gerald_contribution" value="{{ motorbike.gerald_contribution }}">
+            </div>
+            <div class="col-md-6">
+              <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="is_sold" name="is_sold" {% if motorbike.is_sold %}checked{% endif %}>
+                <label class="form-check-label" for="is_sold">Marked as sold</label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="sale_price">Sale price</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="sale_price" name="sale_price" value="{{ motorbike.sale_price or '' }}" placeholder="Required if sold">
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="ignore" name="ignore" {% if motorbike.ignore %}checked{% endif %}>
+                <label class="form-check-label" for="ignore">Exclude from analytics</label>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-4">Save changes</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Add part</h2>
+          {% if motorbike.is_sold %}<span class="badge bg-warning text-dark">Disabled for sold bikes</span>{% endif %}
+        </div>
+        <form method="post">
+          <input type="hidden" name="action" value="add_part">
+          <div class="mb-3">
+            <label class="form-label" for="part_description">Description</label>
+            <input class="form-control" id="part_description" name="description" required {% if motorbike.is_sold %}disabled{% endif %}>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="part_source">Source</label>
+            <input class="form-control" id="part_source" name="source" {% if motorbike.is_sold %}disabled{% endif %}>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="part_cost">Cost</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="part_cost" name="cost" required {% if motorbike.is_sold %}disabled{% endif %}>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="part_buyer">Buyer</label>
+            <select class="form-select" id="part_buyer" name="buyer" {% if motorbike.is_sold %}disabled{% endif %}>
+              <option value="tanya">Tanya</option>
+              <option value="gerald">Gerald</option>
+              <option value="shared">Shared</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="part_purchased_on">Purchased on</label>
+            <input type="date" class="form-control" id="part_purchased_on" name="purchased_on" {% if motorbike.is_sold %}disabled{% endif %}>
+          </div>
+          <button type="submit" class="btn btn-primary" {% if motorbike.is_sold %}disabled{% endif %}>Add part</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-5">
+  <div class="card-body p-4">
+    <h2 class="h5 mb-3">Parts</h2>
+    {% if motorbike.parts %}
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Description</th>
+            <th>Buyer</th>
+            <th>Source</th>
+            <th>Cost</th>
+            <th>Purchased</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for part in motorbike.parts %}
+          <tr>
+            <td><input class="form-control" name="description" value="{{ part.description }}" form="update-part-{{ part.id }}" {% if motorbike.is_sold %}readonly{% endif %}></td>
+            <td>
+              <select class="form-select" name="buyer" form="update-part-{{ part.id }}" {% if motorbike.is_sold %}disabled{% endif %}>
+                {% for option in ['tanya', 'gerald', 'shared', 'other'] %}
+                <option value="{{ option }}" {% if part.buyer == option %}selected{% endif %}>{{ option.title() }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td><input class="form-control" name="source" value="{{ part.source or '' }}" form="update-part-{{ part.id }}" {% if motorbike.is_sold %}readonly{% endif %}></td>
+            <td><input type="number" step="0.01" min="0" class="form-control" name="cost" value="{{ part.cost }}" form="update-part-{{ part.id }}" {% if motorbike.is_sold %}readonly{% endif %}></td>
+            <td><input type="date" class="form-control" name="purchased_on" value="{{ part.purchased_on.isoformat() if part.purchased_on else '' }}" form="update-part-{{ part.id }}" {% if motorbike.is_sold %}readonly{% endif %}></td>
+            <td class="text-end">
+              <div class="btn-group">
+                <button class="btn btn-outline-primary btn-sm" type="submit" form="update-part-{{ part.id }}" {% if motorbike.is_sold %}disabled{% endif %}>Save</button>
+                <form method="post" action="{{ url_for('main.delete_part', part_id=part.id) }}" onsubmit="return confirm('Remove this part?')">
+                  <button class="btn btn-outline-danger btn-sm" type="submit" {% if motorbike.is_sold %}disabled{% endif %}>Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% for part in motorbike.parts %}
+    <form id="update-part-{{ part.id }}" method="post" action="{{ url_for('main.update_part', part_id=part.id) }}"></form>
+    {% endfor %}
+    {% else %}
+    <p class="text-muted mb-0">No parts recorded yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
