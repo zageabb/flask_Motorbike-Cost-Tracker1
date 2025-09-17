@@ -3,70 +3,144 @@ import sys
 
 import pytest
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app import app, db, Motorbike, Expense
-=======
-#from app import app, db, Expense
+from app import Motorbike, Part, User, create_app, db
 
 
 @pytest.fixture
-def client():
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-        yield client
-        with app.app_context():
-            db.drop_all()
+def app():
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SEED_SAMPLE_DATA": False,
+        }
+    )
 
-
-def test_add_and_edit_expense(client):
-    # add a motorbike
-    resp = client.post('/bikes', data={'name': 'Honda'}, follow_redirects=True)
-    assert resp.status_code == 200
-    assert b'Honda' in resp.data
+    yield app
 
     with app.app_context():
-        bike_id = Motorbike.query.filter_by(name='Honda').first().id
+        db.session.remove()
+        db.drop_all()
 
-    # add an expense for the bike
-    resp = client.post(f'/bikes/{bike_id}', data={
-        'description': 'Oil Change',
-        'category': 'Maintenance',
-        'amount': '45.50',
-        'user': 'alice',
 
-def test_add_expense(client):
-    resp = client.post('/add', data={
-        'description': 'Oil Change',
-        'category': 'Maintenance',
-        'amount': '45.50',
+@pytest.fixture
+def client(app):
+    return app.test_client()
 
-        'date': '2024-01-01'
-    }, follow_redirects=True)
-    assert resp.status_code == 200
-    assert b'Oil Change' in resp.data
 
-    assert b'alice' in resp.data
+def register_and_login(client, email="owner@example.com", password="strongpass"):
+    response = client.post(
+        "/auth/signup",
+        data={"email": email, "password": password, "confirm": password},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b"Open dashboard" in response.data
+    return response
+
+
+def test_protected_routes_require_authentication(client):
+    response = client.get("/dashboard", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Welcome back" in response.data
+
+
+def test_dashboard_creation_flow(client, app):
+    register_and_login(client)
+
+    create_response = client.post(
+        "/dashboard",
+        data={
+            "form_type": "motorbike",
+            "name": "Tracker",
+            "purchase_price": "5000",
+            "tanya_contribution": "2500",
+            "gerald_contribution": "2500",
+            "buyer": "Tanya",
+        },
+        follow_redirects=True,
+    )
+    assert create_response.status_code == 200
+    assert b"Motorbike created" in create_response.data
 
     with app.app_context():
-        expense_id = Expense.query.filter_by(description='Oil Change').first().id
+        bike = Motorbike.query.filter_by(name="Tracker").first()
+        assert bike is not None
+        assert bike.purchase_price == pytest.approx(5000)
 
-    # edit the expense
-    resp = client.post(f'/expenses/{expense_id}/edit', data={
-        'description': 'Chain',
-        'category': 'Maintenance',
-        'amount': '30.00',
-        'user': 'bob',
-        'date': '2024-02-01'
-    }, follow_redirects=True)
-    assert resp.status_code == 200
-    assert b'Chain' in resp.data
-    assert b'bob' in resp.data
-    assert b'Oil Change' not in resp.data
-    assert b'45.50' in resp.data
+    part_response = client.post(
+        "/dashboard",
+        data={
+            "form_type": "part",
+            "motorbike_id": str(bike.id),
+            "description": "New tires",
+            "source": "Shop",
+            "cost": "220.50",
+            "buyer": "gerald",
+            "purchased_on": "2024-01-15",
+        },
+        follow_redirects=True,
+    )
+    assert part_response.status_code == 200
+    assert b"Part added" in part_response.data
 
-    # Ensure total is calculated
-    assert b'Total' in resp.data
+    dashboard = client.get("/dashboard")
+    assert b"Tracker" in dashboard.data
+    assert b"$5220.50" in dashboard.data
+
+
+def test_analytics_reflects_profit_and_ignore(client, app):
+    register_and_login(client)
+
+    # create sold bike through dashboard update
+    client.post(
+        "/dashboard",
+        data={
+            "form_type": "motorbike",
+            "name": "Racer",
+            "purchase_price": "6000",
+            "tanya_contribution": "3000",
+            "gerald_contribution": "3000",
+            "buyer": "Gerald",
+            "is_sold": "on",
+            "sale_price": "7800",
+        },
+        follow_redirects=True,
+    )
+
+    with app.app_context():
+        racer = Motorbike.query.filter_by(name="Racer").first()
+        racer.parts.append(
+            Part(description="Brakes", source="Garage", buyer="tanya", cost=200)
+        )
+        db.session.commit()
+
+    # create ignored bike directly via dashboard form
+    client.post(
+        "/dashboard",
+        data={
+            "form_type": "motorbike",
+            "name": "Project", 
+            "purchase_price": "1000",
+            "tanya_contribution": "600",
+            "gerald_contribution": "400",
+            "ignore": "on",
+        },
+        follow_redirects=True,
+    )
+
+    analytics = client.get("/analytics")
+    assert analytics.status_code == 200
+    # ensure ignored bike does not affect totals
+    assert b"Project" in analytics.data  # still listed but greyed out
+    assert b"$6200.00" in analytics.data  # racer total cost only
+    assert b"$3200.00" in analytics.data  # tanya investment includes part
+    assert b"$3000.00" in analytics.data  # gerald investment
+    assert b"$1600.00" in analytics.data  # profit
+    assert b"$800.00" in analytics.data  # profit share
+
+    sold_only = client.get("/analytics?status=sold")
+    assert b"Racer" in sold_only.data
+    assert b"Project" not in sold_only.data

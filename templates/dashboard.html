@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Motorbike Cost Tracker{% endblock %}
+{% block content %}
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Total Cost</h2>
+      <p class="display-6 mb-0">${{ '%.2f'|format(summary.total_cost) }}</p>
+      <p class="text-muted mb-0">Combined purchase price and part investments for active bikes.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Projected Sale</h2>
+      <p class="display-6 mb-0">${{ '%.2f'|format(summary.projected_sale) }}</p>
+      <p class="text-muted mb-0">Assuming unsold, non-ignored bikes sell at 2× total cost.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="summary-card p-4 h-100">
+      <h2 class="h6 text-uppercase text-muted">Actual Profit</h2>
+      <p class="display-6 mb-0">${{ '%.2f'|format(summary.actual_profit) }}</p>
+      <p class="text-muted mb-0">Realized profit from sold bikes that count toward analytics.</p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-5">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4">
+        <h2 class="h5 mb-3">Add motorbike</h2>
+        <form method="post">
+          <input type="hidden" name="form_type" value="motorbike">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="name">Name</label>
+              <input class="form-control" id="name" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="purchase_price">Initial cost</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="purchase_price" name="purchase_price" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="buyer">Buyer</label>
+              <input class="form-control" id="buyer" name="buyer" placeholder="Optional">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tanya_contribution">Tanya contribution</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="tanya_contribution" name="tanya_contribution" value="0">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="gerald_contribution">Gerald contribution</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="gerald_contribution" name="gerald_contribution" value="0">
+            </div>
+            <div class="col-md-6">
+              <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="is_sold" name="is_sold">
+                <label class="form-check-label" for="is_sold">Already sold</label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="sale_price">Sale price</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="sale_price" name="sale_price" placeholder="Required if sold">
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="ignore" name="ignore">
+                <label class="form-check-label" for="ignore">Ignore this bike from analytics</label>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-4">Create motorbike</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Add part</h2>
+          {% if not unsold_bikes %}
+          <span class="badge bg-warning text-dark">No unsold bikes available</span>
+          {% endif %}
+        </div>
+        <form method="post">
+          <input type="hidden" name="form_type" value="part">
+          <div class="mb-3">
+            <label class="form-label" for="motorbike_id">Motorbike</label>
+            <select class="form-select" id="motorbike_id" name="motorbike_id" {% if not unsold_bikes %}disabled{% endif %}>
+              {% for bike in unsold_bikes %}
+              <option value="{{ bike.id }}">{{ bike.name }}{% if bike.ignore %} · Ignored{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="description">Description</label>
+            <input class="form-control" id="description" name="description" required {% if not unsold_bikes %}disabled{% endif %}>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="source">Source</label>
+            <input class="form-control" id="source" name="source" {% if not unsold_bikes %}disabled{% endif %}>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="cost">Cost</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="cost" name="cost" required {% if not unsold_bikes %}disabled{% endif %}>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="buyer">Buyer</label>
+            <select class="form-select" id="buyer" name="buyer" {% if not unsold_bikes %}disabled{% endif %}>
+              <option value="tanya">Tanya</option>
+              <option value="gerald">Gerald</option>
+              <option value="shared">Shared</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="purchased_on">Purchased on</label>
+            <input type="date" class="form-control" id="purchased_on" name="purchased_on" {% if not unsold_bikes %}disabled{% endif %}>
+          </div>
+          <button type="submit" class="btn btn-primary" {% if not unsold_bikes %}disabled{% endif %}>Add part</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 class="h4 mb-3">Motorbike portfolio</h2>
+<div class="row g-4">
+  {% for bike in motorbikes %}
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <div>
+            <h3 class="h5 mb-1"><a href="{{ url_for('main.motorbike_detail', motorbike_id=bike.id) }}" class="text-decoration-none">{{ bike.name }}</a></h3>
+            <div class="d-flex flex-wrap gap-2">
+              {% if bike.is_sold %}<span class="badge bg-success">Sold</span>{% else %}<span class="badge bg-info text-dark">Available</span>{% endif %}
+              {% if bike.ignore %}<span class="badge bg-secondary">Ignored</span>{% endif %}
+              {% if bike.buyer %}<span class="badge bg-light text-dark">Buyer: {{ bike.buyer }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="text-end">
+            <p class="mb-1 fw-semibold">Total cost: ${{ '%.2f'|format(bike.total_cost) }}</p>
+            <p class="mb-1 text-muted">Parts: ${{ '%.2f'|format(bike.part_total) }}</p>
+            <p class="mb-0 text-muted">Base cost: ${{ '%.2f'|format(bike.purchase_price) }}</p>
+          </div>
+        </div>
+        {% if bike.parts %}
+        <div class="table-responsive mt-4">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Description</th>
+                <th>Buyer</th>
+                <th>Source</th>
+                <th>Cost</th>
+                <th>Purchased</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for part in bike.parts %}
+              <tr>
+                <td>{{ part.description }}</td>
+                <td class="text-capitalize">{{ part.buyer }}</td>
+                <td>{{ part.source or '—' }}</td>
+                <td>${{ '%.2f'|format(part.cost) }}</td>
+                <td>{{ part.purchased_on.strftime('%b %d, %Y') if part.purchased_on else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mt-3 mb-0">No parts recorded yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="alert alert-info">Add your first motorbike to begin tracking costs.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

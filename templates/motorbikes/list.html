@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Motorbikes · Motorbike Cost Tracker{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">Motorbike inventory</h1>
+  <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">Add motorbike</a>
+</div>
+<div class="row g-4">
+  {% for bike in motorbikes %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body p-4 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h2 class="h5 mb-1">{{ bike.name }}</h2>
+            <div class="d-flex flex-wrap gap-2">
+              {% if bike.is_sold %}<span class="badge bg-success">Sold</span>{% else %}<span class="badge bg-info text-dark">Unsold</span>{% endif %}
+              {% if bike.ignore %}<span class="badge bg-secondary">Ignored</span>{% endif %}
+            </div>
+          </div>
+          <div class="text-end">
+            <p class="mb-0 fw-semibold">${{ '%.2f'|format(bike.total_cost) }}</p>
+            <small class="text-muted">Total cost</small>
+          </div>
+        </div>
+        <p class="text-muted mb-4">Base cost ${{ '%.2f'|format(bike.purchase_price) }} · {{ bike.parts|length }} parts · Buyer {{ bike.buyer or 'N/A' }}</p>
+        <div class="mt-auto">
+          <a class="btn btn-outline-primary w-100" href="{{ url_for('main.motorbike_detail', motorbike_id=bike.id) }}">View details</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="alert alert-info">No motorbikes yet. Create one from the dashboard to get started.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
