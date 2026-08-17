@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Settings · Motorbike Cost Tracker{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-xl-8">
+  <h1 class="h3">LLM settings</h1>
+  <p class="text-muted">Uses the same local Ollama API pattern as General Search.</p>
+  {% if warning %}<div class="alert alert-warning">{{ warning }}</div>{% endif %}
+  <div class="card border-0 shadow-sm"><div class="card-body p-4">
+    <form method="post">
+      <div class="mb-3"><label class="form-label" for="ollama_url">Ollama URL</label><input class="form-control" id="ollama_url" name="ollama_url" value="{{ settings.ollama_url }}" required></div>
+      <div class="mb-3"><label class="form-label" for="model">Model</label><input class="form-control" id="model" name="model" list="models" value="{{ settings.model }}" required><datalist id="models">{% for model in models %}<option value="{{ model }}">{% endfor %}</datalist></div>
+      <div class="mb-3"><label class="form-label" for="assistant_instructions">Assistant instructions</label><textarea class="form-control" id="assistant_instructions" name="assistant_instructions" rows="7">{{ settings.assistant_instructions }}</textarea></div>
+      <button class="btn btn-primary">Save settings</button>
+    </form>
+  </div></div>
+</div></div>
+{% endblock %}

@@ -5,21 +5,21 @@
   <div class="col-md-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Total Cost</h2>
-      <p class="display-6 mb-0">${{ '%.2f'|format(summary.total_cost) }}</p>
+      <p class="display-6 mb-0">£{{ '%.2f'|format(summary.total_cost) }}</p>
       <p class="text-muted mb-0">Combined purchase price and part investments for active bikes.</p>
     </div>
   </div>
   <div class="col-md-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Projected Sale</h2>
-      <p class="display-6 mb-0">${{ '%.2f'|format(summary.projected_sale) }}</p>
+      <p class="display-6 mb-0">£{{ '%.2f'|format(summary.projected_sale) }}</p>
       <p class="text-muted mb-0">Assuming unsold, non-ignored bikes sell at 2× total cost.</p>
     </div>
   </div>
   <div class="col-md-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Actual Profit</h2>
-      <p class="display-6 mb-0">${{ '%.2f'|format(summary.actual_profit) }}</p>
+      <p class="display-6 mb-0">£{{ '%.2f'|format(summary.actual_profit) }}</p>
       <p class="text-muted mb-0">Realized profit from sold bikes that count toward analytics.</p>
     </div>
   </div>
@@ -142,9 +142,9 @@
             </div>
           </div>
           <div class="text-end">
-            <p class="mb-1 fw-semibold">Total cost: ${{ '%.2f'|format(bike.total_cost) }}</p>
-            <p class="mb-1 text-muted">Parts: ${{ '%.2f'|format(bike.part_total) }}</p>
-            <p class="mb-0 text-muted">Base cost: ${{ '%.2f'|format(bike.purchase_price) }}</p>
+            <p class="mb-1 fw-semibold">Total cost: £{{ '%.2f'|format(bike.total_cost) }}</p>
+            <p class="mb-1 text-muted">Parts: £{{ '%.2f'|format(bike.part_total) }}</p>
+            <p class="mb-0 text-muted">Base cost: £{{ '%.2f'|format(bike.purchase_price) }}</p>
           </div>
         </div>
         {% if bike.parts %}
@@ -165,7 +165,7 @@
                 <td>{{ part.description }}</td>
                 <td class="text-capitalize">{{ part.buyer }}</td>
                 <td>{{ part.source or '—' }}</td>
-                <td>${{ '%.2f'|format(part.cost) }}</td>
+                <td>£{{ '%.2f'|format(part.cost) }}</td>
                 <td>{{ part.purchased_on.strftime('%b %d, %Y') if part.purchased_on else '—' }}</td>
               </tr>
               {% endfor %}

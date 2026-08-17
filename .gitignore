@@ -3,4 +3,4 @@ instance/
 motorbike_costs.db
 venv/
 *.pyc
-
+settings.json

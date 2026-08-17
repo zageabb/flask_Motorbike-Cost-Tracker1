@@ -17,22 +17,22 @@
   <div class="col-md-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Portfolio cost</h2>
-      <p class="display-6 mb-0">${{ '%.2f'|format(totals.total_cost) }}</p>
+      <p class="display-6 mb-0">£{{ '%.2f'|format(totals.total_cost) }}</p>
       <p class="text-muted mb-0">Excludes ignored motorbikes.</p>
     </div>
   </div>
   <div class="col-md-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Tanya investment</h2>
-      <p class="display-6 mb-1">${{ '%.2f'|format(totals.tanya_investment) }}</p>
-      <p class="text-muted mb-0">Profit share: ${{ '%.2f'|format(totals.profit_share) }}</p>
+      <p class="display-6 mb-1">£{{ '%.2f'|format(totals.tanya_investment) }}</p>
+      <p class="text-muted mb-0">Profit share: £{{ '%.2f'|format(totals.profit_share) }}</p>
     </div>
   </div>
   <div class="col-md-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Gerald investment</h2>
-      <p class="display-6 mb-1">${{ '%.2f'|format(totals.gerald_investment) }}</p>
-      <p class="text-muted mb-0">Profit share: ${{ '%.2f'|format(totals.profit_share) }}</p>
+      <p class="display-6 mb-1">£{{ '%.2f'|format(totals.gerald_investment) }}</p>
+      <p class="text-muted mb-0">Profit share: £{{ '%.2f'|format(totals.profit_share) }}</p>
     </div>
   </div>
 </div>
@@ -61,12 +61,12 @@
               {% if row.ignore %}<span class="badge bg-secondary">Ignored</span>{% endif %}
               {% if row.is_sold %}<span class="badge bg-success">Sold</span>{% else %}<span class="badge bg-info text-dark">Unsold</span>{% endif %}
             </td>
-            <td>${{ '%.2f'|format(row.total_cost) }}</td>
+            <td>£{{ '%.2f'|format(row.total_cost) }}</td>
             <td>{{ row.buyer or '—' }}</td>
-            <td>${{ '%.2f'|format(row.tanya_investment) }}</td>
-            <td>${{ '%.2f'|format(row.gerald_investment) }}</td>
-            <td>${{ '%.2f'|format(row.profit) }}</td>
-            <td>${{ '%.2f'|format(row.profit_share) }}</td>
+            <td>£{{ '%.2f'|format(row.tanya_investment) }}</td>
+            <td>£{{ '%.2f'|format(row.gerald_investment) }}</td>
+            <td>£{{ '%.2f'|format(row.profit) }}</td>
+            <td>£{{ '%.2f'|format(row.profit_share) }}</td>
           </tr>
           {% else %}
           <tr>

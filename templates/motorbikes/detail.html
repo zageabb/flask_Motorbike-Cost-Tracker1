@@ -20,25 +20,25 @@
   <div class="col-lg-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Total cost</h2>
-      <p class="display-6 mb-1">${{ '%.2f'|format(motorbike.total_cost) }}</p>
-      <p class="text-muted mb-1">Purchase price ${{ '%.2f'|format(motorbike.purchase_price) }}</p>
-      <p class="text-muted mb-0">Parts ${{ '%.2f'|format(motorbike.part_total) }}</p>
+      <p class="display-6 mb-1">£{{ '%.2f'|format(motorbike.total_cost) }}</p>
+      <p class="text-muted mb-1">Purchase price £{{ '%.2f'|format(motorbike.purchase_price) }}</p>
+      <p class="text-muted mb-0">Parts £{{ '%.2f'|format(motorbike.part_total) }}</p>
     </div>
   </div>
   <div class="col-lg-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Partner investments</h2>
-      <p class="mb-1">Tanya: ${{ '%.2f'|format(motorbike.tanya_contribution + motorbike.part_investment('tanya')) }}</p>
-      <p class="mb-1">Gerald: ${{ '%.2f'|format(motorbike.gerald_contribution + motorbike.part_investment('gerald')) }}</p>
-      <p class="mb-0">Shared/Other: ${{ '%.2f'|format(motorbike.part_total - motorbike.part_investment('tanya') - motorbike.part_investment('gerald')) }}</p>
+      <p class="mb-1">Tanya: £{{ '%.2f'|format(motorbike.tanya_contribution + motorbike.part_investment('tanya')) }}</p>
+      <p class="mb-1">Gerald: £{{ '%.2f'|format(motorbike.gerald_contribution + motorbike.part_investment('gerald')) }}</p>
+      <p class="mb-0">Shared/Other: £{{ '%.2f'|format(motorbike.part_total - motorbike.part_investment('tanya') - motorbike.part_investment('gerald')) }}</p>
     </div>
   </div>
   <div class="col-lg-4">
     <div class="summary-card p-4 h-100">
       <h2 class="h6 text-uppercase text-muted">Profit</h2>
-      <p class="display-6 mb-1">${{ '%.2f'|format(motorbike.profit) }}</p>
+      <p class="display-6 mb-1">£{{ '%.2f'|format(motorbike.profit) }}</p>
       {% if motorbike.is_sold and motorbike.sale_price %}
-      <p class="text-muted mb-0">Sold for ${{ '%.2f'|format(motorbike.sale_price) }}</p>
+      <p class="text-muted mb-0">Sold for £{{ '%.2f'|format(motorbike.sale_price) }}</p>
       {% else %}
       <p class="text-muted mb-0">Mark as sold to calculate profit.</p>
       {% endif %}
