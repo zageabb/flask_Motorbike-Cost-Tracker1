@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}LLM Assistant · Motorbike Cost Tracker{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-xl-9">
+  <h1 class="h3">LLM portfolio assistant</h1>
+  <p class="text-muted">Ask about the live portfolio or describe equipment and motorbikes to add. Proposed writes require confirmation.</p>
+  <div class="card border-0 shadow-sm"><div class="card-body p-4">
+    <form method="post">
+      <label class="form-label" for="query">Question or instruction</label>
+      <textarea class="form-control" id="query" name="query" rows="5" required placeholder="Add a £35 battery from Amazon, paid by Tanya, to the blue YBR...">{{ query }}</textarea>
+      <button class="btn btn-primary mt-3" type="submit">Ask assistant</button>
+    </form>
+  </div></div>
+  {% if result %}
+  <div class="card border-0 shadow-sm mt-4"><div class="card-body p-4">
+    <h2 class="h5">Response</h2><p style="white-space: pre-wrap">{{ result.reply }}</p>
+    {% if result.actions %}
+      <h3 class="h6 mt-4">Proposed data changes</h3>
+      <pre class="bg-light border rounded p-3"><code>{{ result.actions|tojson(indent=2) }}</code></pre>
+      <form method="post" action="{{ url_for('main.apply_assistant_actions') }}" onsubmit="return confirm('Apply all proposed changes to the live tracker?')">
+        <button class="btn btn-success">Confirm and apply {{ result.actions|length }} change(s)</button>
+      </form>
+    {% else %}<p class="text-muted mb-0">No data changes proposed.</p>{% endif %}
+  </div></div>
+  {% endif %}
+</div></div>
+{% endblock %}

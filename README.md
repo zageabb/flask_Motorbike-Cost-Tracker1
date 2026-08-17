@@ -4,6 +4,10 @@
 This project is a Flask web application for tracking motorbike expenses. You can manage multiple bikes, log costs under each one, and attribute expenses to different users.
 
 ## Features
+- Full Flask replacement for the original Reflex motorbike portfolio tracker.
+- Local Ollama assistant grounded in current portfolio data.
+- Review-and-confirm LLM creation of motorbikes, parts, equipment, and updates.
+- One-time migration utility for the original Reflex SQLite database.
 - Create motorbikes and record expenses for each.
 - Capture who incurred a cost with a user field.
 - Edit or delete existing expenses.
@@ -32,4 +36,11 @@ This project is a Flask web application for tracking motorbike expenses. You can
 Run the unit tests with:
 ```bash
 pytest
+```
+
+## Reflex data migration
+
+Run against an empty destination database:
+```bash
+python migrate_reflex.py /path/to/reflex.db sqlite:////absolute/path/to/motorbike_costs.db
 ```

@@ -6,7 +6,7 @@ from typing import Dict, Iterable, List, Optional
 
 import bcrypt
 import os
-from flask import Blueprint, Flask, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Flask, flash, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -17,6 +17,9 @@ from flask_login import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
+
+from llm_service import LLMError, ask_assistant, list_models
+from settings_store import get_settings, save_settings
 
 
 db = SQLAlchemy()
@@ -120,10 +123,10 @@ def create_app(test_config: Optional[Dict] = None) -> Flask:
     app = Flask(__name__)
     database_uri = os.environ.get("DATABASE_URL", "sqlite:///motorbike_costs.db")
     app.config.from_mapping(
-        SECRET_KEY="dev-secret-key",
+        SECRET_KEY=os.environ.get("SECRET_KEY", "dev-secret-key"),
         SQLALCHEMY_DATABASE_URI=database_uri,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        SEED_SAMPLE_DATA=True,
+        SEED_SAMPLE_DATA=os.environ.get("SEED_SAMPLE_DATA", "true").lower() in {"1", "true", "yes"},
     )
     if test_config:
         app.config.update(test_config)
@@ -262,6 +265,31 @@ def logout():
     logout_user()
     flash("Signed out successfully", "success")
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not current_user.check_password(current_password):
+            flash("Current password is incorrect", "danger")
+        elif len(new_password) < 12:
+            flash("New password must be at least 12 characters", "danger")
+        elif new_password != confirm_password:
+            flash("New passwords do not match", "danger")
+        elif current_user.check_password(new_password):
+            flash("New password must be different from the current password", "danger")
+        else:
+            current_user.set_password(new_password)
+            db.session.commit()
+            flash("Password updated successfully", "success")
+            return redirect(url_for("main.landing"))
+
+    return render_template("auth/change_password.html")
 
 
 main_bp = Blueprint("main", __name__)
@@ -415,6 +443,12 @@ def _handle_part_creation() -> None:
 def motorbikes_list():
     motorbikes = Motorbike.query.order_by(Motorbike.created_at.desc()).all()
     return render_template("motorbikes/list.html", motorbikes=motorbikes)
+
+
+@main_bp.route("/bikes")
+def legacy_bikes_url():
+    """Keep the deployment-agent health URL and old bookmarks working."""
+    return redirect(url_for("main.motorbikes_list"))
 
 
 @main_bp.route("/motorbikes/<int:motorbike_id>", methods=["GET", "POST"])
@@ -611,6 +645,154 @@ def analytics():
         rows=analytics_rows,
         totals=totals,
     )
+
+
+def _portfolio_context() -> dict:
+    bikes = Motorbike.query.order_by(Motorbike.id).all()
+    return {
+        "currency": "GBP",
+        "motorbikes": [
+            {
+                "id": bike.id, "name": bike.name, "purchase_price": bike.purchase_price,
+                "tanya_contribution": bike.tanya_contribution,
+                "gerald_contribution": bike.gerald_contribution, "buyer": bike.buyer,
+                "is_sold": bike.is_sold, "sale_price": bike.sale_price,
+                "ignore": bike.ignore, "total_cost": bike.total_cost,
+                "parts": [
+                    {"id": part.id, "description": part.description, "source": part.source,
+                     "buyer": part.buyer, "cost": part.cost,
+                     "purchased_on": part.purchased_on.isoformat() if part.purchased_on else None}
+                    for part in bike.parts
+                ],
+            }
+            for bike in bikes
+        ],
+    }
+
+
+def _normalise_actions(actions) -> list[dict]:
+    if not isinstance(actions, list):
+        return []
+    allowed = {"create_motorbike", "add_part", "update_motorbike"}
+    return [action for action in actions[:20] if isinstance(action, dict) and action.get("type") in allowed]
+
+
+@main_bp.route("/assistant", methods=["GET", "POST"])
+@login_required
+def assistant():
+    result = None
+    query = ""
+    if request.method == "POST":
+        query = request.form.get("query", "").strip()
+        if not query:
+            flash("Enter a question or data-creation request", "danger")
+        else:
+            try:
+                result = ask_assistant(query, _portfolio_context(), get_settings())
+                result["actions"] = _normalise_actions(result.get("actions"))
+                session["assistant_actions"] = result["actions"]
+            except LLMError as exc:
+                flash(str(exc), "danger")
+    return render_template("assistant.html", result=result, query=query)
+
+
+def _number(action: dict, key: str, default=0.0) -> float:
+    value = float(action.get(key, default) if action.get(key) is not None else default)
+    if value < 0:
+        raise ValueError(f"{key} cannot be negative")
+    return value
+
+
+def _apply_assistant_action(action: dict) -> None:
+    action_type = action["type"]
+    if action_type == "create_motorbike":
+        name = str(action.get("name") or "").strip()
+        if not name or Motorbike.query.filter(func.lower(Motorbike.name) == name.lower()).first():
+            raise ValueError("Motorbike name is missing or already exists")
+        tanya = _number(action, "tanya_contribution")
+        gerald = _number(action, "gerald_contribution")
+        purchase = _number(action, "purchase_price", tanya + gerald)
+        if abs(purchase - tanya - gerald) > 0.01:
+            purchase = tanya + gerald
+        sold = bool(action.get("is_sold", False))
+        sale = action.get("sale_price")
+        if sold and sale is None:
+            raise ValueError("A sold motorbike requires a sale price")
+        db.session.add(Motorbike(name=name, purchase_price=purchase,
+            tanya_contribution=tanya, gerald_contribution=gerald,
+            buyer=str(action.get("buyer") or "") or None, is_sold=sold,
+            sale_price=_number(action, "sale_price") if sale is not None else None,
+            ignore=bool(action.get("ignore", False))))
+        return
+    bike = db.session.get(Motorbike, int(action.get("motorbike_id", 0)))
+    if not bike:
+        raise ValueError("The referenced motorbike does not exist")
+    if action_type == "add_part":
+        if bike.is_sold:
+            raise ValueError(f"Cannot add equipment to sold motorbike {bike.name}")
+        description = str(action.get("description") or "").strip()
+        if not description:
+            raise ValueError("Equipment description is required")
+        purchased_on = date.today()
+        if action.get("purchased_on"):
+            purchased_on = datetime.strptime(str(action["purchased_on"]), "%Y-%m-%d").date()
+        db.session.add(Part(motorbike=bike, description=description,
+            source=str(action.get("source") or "").strip() or None,
+            buyer=str(action.get("buyer") or "other").lower(),
+            cost=_number(action, "cost"), purchased_on=purchased_on))
+        return
+    for key in ("name", "buyer"):
+        if key in action and action[key] is not None:
+            setattr(bike, key if key == "name" else "buyer", str(action[key]).strip())
+    for source, target in (("purchase_price", "purchase_price"),
+                           ("tanya_contribution", "tanya_contribution"),
+                           ("gerald_contribution", "gerald_contribution")):
+        if source in action:
+            setattr(bike, target, _number(action, source))
+    if "is_sold" in action:
+        bike.is_sold = bool(action["is_sold"])
+    if "sale_price" in action:
+        bike.sale_price = _number(action, "sale_price") if action["sale_price"] is not None else None
+    if "ignore" in action:
+        bike.ignore = bool(action["ignore"])
+    if bike.is_sold and bike.sale_price is None:
+        raise ValueError("A sold motorbike requires a sale price")
+
+
+@main_bp.post("/assistant/apply")
+@login_required
+def apply_assistant_actions():
+    actions = _normalise_actions(session.pop("assistant_actions", []))
+    if not actions:
+        flash("There are no pending changes to apply", "danger")
+        return redirect(url_for("main.assistant"))
+    try:
+        for action in actions:
+            _apply_assistant_action(action)
+        db.session.commit()
+    except (ValueError, TypeError) as exc:
+        db.session.rollback()
+        flash(f"No changes were applied: {exc}", "danger")
+        return redirect(url_for("main.assistant"))
+    flash(f"Applied {len(actions)} LLM-proposed change(s)", "success")
+    return redirect(url_for("main.dashboard"))
+
+
+@main_bp.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    if request.method == "POST":
+        save_settings(request.form.to_dict())
+        flash("LLM settings saved", "success")
+        return redirect(url_for("main.settings"))
+    configured = get_settings()
+    try:
+        models = list_models(configured)
+        warning = None
+    except LLMError as exc:
+        models = [configured["model"]] if configured["model"] else []
+        warning = str(exc)
+    return render_template("settings.html", settings=configured, models=models, warning=warning)
 
 
 def _build_portfolio_summary(motorbikes: Iterable[Motorbike]) -> PortfolioSummary:

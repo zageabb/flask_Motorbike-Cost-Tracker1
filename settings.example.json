@@ -1,0 +1,5 @@
+{
+  "ollama_url": "http://127.0.0.1:11434",
+  "model": "llama3.2",
+  "assistant_instructions": "Use only the supplied portfolio data and never invent financial records."
+}
