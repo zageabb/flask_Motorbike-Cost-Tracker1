@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Dict, Iterable, List, Optional
 
 import bcrypt
@@ -122,11 +122,24 @@ class AnalyticsTotals:
 def create_app(test_config: Optional[Dict] = None) -> Flask:
     app = Flask(__name__)
     database_uri = os.environ.get("DATABASE_URL", "sqlite:///motorbike_costs.db")
+    try:
+        auth_session_days = max(int(os.environ.get("AUTH_SESSION_DAYS", "30")), 1)
+    except ValueError:
+        auth_session_days = 30
+
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-secret-key"),
         SQLALCHEMY_DATABASE_URI=database_uri,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SEED_SAMPLE_DATA=os.environ.get("SEED_SAMPLE_DATA", "true").lower() in {"1", "true", "yes"},
+        PERMANENT_SESSION_LIFETIME=timedelta(days=auth_session_days),
+        REMEMBER_COOKIE_DURATION=timedelta(days=auth_session_days),
+        SESSION_REFRESH_EACH_REQUEST=True,
+        REMEMBER_COOKIE_REFRESH_EACH_REQUEST=True,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        REMEMBER_COOKIE_HTTPONLY=True,
+        REMEMBER_COOKIE_SAMESITE="Lax",
     )
     if test_config:
         app.config.update(test_config)
@@ -220,7 +233,8 @@ def login():
             flash("Invalid credentials", "danger")
             return render_template("auth/login.html")
 
-        login_user(user)
+        login_user(user, remember=True)
+        session.permanent = True
         return redirect(url_for("main.landing"))
 
     return render_template("auth/login.html")
@@ -253,7 +267,8 @@ def signup():
         db.session.add(user)
         db.session.commit()
 
-        login_user(user)
+        login_user(user, remember=True)
+        session.permanent = True
         return redirect(url_for("main.landing"))
 
     return render_template("auth/signup.html")
@@ -837,7 +852,6 @@ def _build_analytics_totals(rows: List[Dict]) -> AnalyticsTotals:
         profit=sum(row["profit"] for row in relevant),
         profit_share=sum(row["profit_share"] for row in relevant),
     )
-
 
 app = create_app()
 
