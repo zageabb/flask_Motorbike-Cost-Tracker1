@@ -14,11 +14,11 @@ def _make_app():
     return app
 
 
-def test_auth_session_defaults_to_30_days():
+def test_auth_session_defaults_to_365_days():
     app = _make_app()
     try:
-        assert app.config["PERMANENT_SESSION_LIFETIME"] == timedelta(days=30)
-        assert app.config["REMEMBER_COOKIE_DURATION"] == timedelta(days=30)
+        assert app.config["PERMANENT_SESSION_LIFETIME"] == timedelta(days=365)
+        assert app.config["REMEMBER_COOKIE_DURATION"] == timedelta(days=365)
         assert app.config["SESSION_REFRESH_EACH_REQUEST"] is True
         assert app.config["REMEMBER_COOKIE_REFRESH_EACH_REQUEST"] is True
     finally:
