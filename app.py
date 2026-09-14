@@ -123,9 +123,9 @@ def create_app(test_config: Optional[Dict] = None) -> Flask:
     app = Flask(__name__)
     database_uri = os.environ.get("DATABASE_URL", "sqlite:///motorbike_costs.db")
     try:
-        auth_session_days = max(int(os.environ.get("AUTH_SESSION_DAYS", "30")), 1)
+        auth_session_days = max(int(os.environ.get("AUTH_SESSION_DAYS", "365")), 1)
     except ValueError:
-        auth_session_days = 30
+        auth_session_days = 365
 
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-secret-key"),
