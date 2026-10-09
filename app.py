@@ -16,6 +16,7 @@ from flask_login import (
     logout_user,
 )
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import func
 
 from llm_service import LLMError, ask_assistant, list_models
@@ -121,6 +122,8 @@ class AnalyticsTotals:
 
 def create_app(test_config: Optional[Dict] = None) -> Flask:
     app = Flask(__name__)
+    # Trust the single isolated UDA/Caddy proxy hop only.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_prefix=1)
     database_uri = os.environ.get("DATABASE_URL", "sqlite:///motorbike_costs.db")
     try:
         auth_session_days = max(int(os.environ.get("AUTH_SESSION_DAYS", "365")), 1)
