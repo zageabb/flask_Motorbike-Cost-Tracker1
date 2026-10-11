@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+import json
+import secrets
 from typing import Dict, Iterable, List, Optional
 
 import bcrypt
 import os
-from flask import Blueprint, Flask, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Flask, flash, g, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -123,7 +125,9 @@ class AnalyticsTotals:
 def create_app(test_config: Optional[Dict] = None) -> Flask:
     app = Flask(__name__)
     # Trust the single isolated UDA/Caddy proxy hop only.
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_prefix=1)
+    # Preserve the proxy socket address so UDA identity headers can only be
+    # trusted when the request actually arrived through local Caddy.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=0, x_proto=1, x_host=1, x_prefix=1)
     database_uri = os.environ.get("DATABASE_URL", "sqlite:///motorbike_costs.db")
     try:
         auth_session_days = max(int(os.environ.get("AUTH_SESSION_DAYS", "365")), 1)
@@ -143,12 +147,54 @@ def create_app(test_config: Optional[Dict] = None) -> Flask:
         SESSION_COOKIE_SAMESITE="Lax",
         REMEMBER_COOKIE_HTTPONLY=True,
         REMEMBER_COOKIE_SAMESITE="Lax",
+        UDA_AUTH_ENABLED=os.environ.get("UDA_AUTH_ENABLED", "false").lower() in {"1", "true", "yes"},
+        UDA_REQUIRED_GROUP=os.environ.get("UDA_REQUIRED_GROUP", "Personal"),
+        UDA_TRUSTED_PROXY_IPS={
+            value.strip()
+            for value in os.environ.get("UDA_TRUSTED_PROXY_IPS", "127.0.0.1,::1").split(",")
+            if value.strip()
+        },
+        UDA_USER_ALIASES=json.loads(os.environ.get("UDA_USER_ALIASES", "{}")),
     )
     if test_config:
         app.config.update(test_config)
 
     db.init_app(app)
     login_manager.init_app(app)
+
+    @app.before_request
+    def authenticate_uda_request() -> None:
+        g.uda_authenticated = False
+        if not app.config.get("UDA_AUTH_ENABLED"):
+            return
+        if request.remote_addr not in app.config["UDA_TRUSTED_PROXY_IPS"]:
+            return
+        asserted_email = (request.headers.get("X-UDA-User") or "").strip().casefold()
+        if not _valid_email(asserted_email):
+            return
+        groups = {
+            value.strip()
+            for value in (request.headers.get("X-UDA-Groups") or "").split(",")
+            if value.strip()
+        }
+        required_group = app.config.get("UDA_REQUIRED_GROUP")
+        if required_group and required_group not in groups:
+            return
+        aliases = app.config.get("UDA_USER_ALIASES") or {}
+        local_email = str(aliases.get(asserted_email, asserted_email)).strip().casefold()
+        if not _valid_email(local_email):
+            return
+        user = User.query.filter(func.lower(User.email) == local_email).first()
+        if user is None:
+            user = User(email=local_email)
+            user.set_password(secrets.token_urlsafe(32))
+            db.session.add(user)
+            db.session.commit()
+        if not current_user.is_authenticated or current_user.id != user.id:
+            login_user(user)
+            session.permanent = True
+        g.uda_authenticated = True
+        g.uda_user = asserted_email
 
     register_blueprints(app)
 
@@ -158,6 +204,10 @@ def create_app(test_config: Optional[Dict] = None) -> Flask:
             seed_data()
 
     return app
+
+
+def _valid_email(value: str) -> bool:
+    return len(value) <= 254 and value.count("@") == 1 and not any(char.isspace() for char in value)
 
 
 def register_blueprints(app: Flask) -> None:

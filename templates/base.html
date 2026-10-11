@@ -41,9 +41,13 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.settings' %}active{% endif %}" href="{{ url_for('main.settings') }}">Settings</a>
               </li>
+              {% if not g.uda_authenticated %}
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'auth.change_password' %}active{% endif %}" href="{{ url_for('auth.change_password') }}">Password</a>
               </li>
+              {% else %}
+              <li class="nav-item"><span class="navbar-text">UDA: {{ g.uda_user }}</span></li>
+              {% endif %}
               <li class="nav-item">
                 <form action="{{ url_for('auth.logout') }}" method="post" class="d-inline">
                   <button class="btn btn-link nav-link" type="submit">Sign out</button>
